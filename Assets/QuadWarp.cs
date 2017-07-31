@@ -8,30 +8,29 @@ public class QuadWarp : MonoBehaviour {
     public Material _mat;
 
     public Texture _tex;
-    public Vector2[] _uvs = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) };
     public Vector2[] _vertixes = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
 
-    Matrix4x4 CalcHomography(Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft)
+    Matrix4x4 CalcHomography(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3)
     {
-        var sx = (topLeft.x - topRight.x) + (bottomRight.x - bottomLeft.x);
-        var sy = (topLeft.y - topRight.y) + (bottomRight.y - bottomLeft.y);
+        var sx = p0.x - p1.x + p2.x - p3.x;
+        var sy = p0.y - p1.y + p2.y - p3.y;
 
-        var dx1 = topRight.x - bottomRight.x;
-        var dx2 = bottomLeft.x - bottomRight.x;
-        var dy1 = topRight.y - bottomRight.y;
-        var dy2 = bottomLeft.y - bottomRight.y;
+        var dx1 = p1.x - p2.x;
+        var dx2 = p3.x - p2.x;
+        var dy1 = p1.y - p2.y;
+        var dy2 = p3.y - p2.y;
 
-        var z = (dx1 * dy2) - (dy1 * dx2);
-        var g = ((sx * dy2) - (sy * dx2)) / z;
-        var h = ((sy * dx1) - (sx * dy1)) / z;
+        var z = (dy1 * dx2) - (dx1 * dy2);
+        var g = ((sx * dy1) - (sy * dx1)) / z;
+        var h = ((sy * dx2) - (sx * dy2)) / z;
 
         var system = new[]{
-            topRight.x - topLeft.x + g * topRight.x,
-            bottomLeft.x - topLeft.x + h * bottomLeft.x,
-            topLeft.x,
-            topRight.y - topLeft.y + g * topRight.y,
-            bottomLeft.y - topLeft.y + h * bottomLeft.y,
-            topLeft.y,
+            p3.x * g - p0.x + p3.x,
+            p1.x * h - p0.x + p1.x,
+            p0.x,
+            p3.y * g - p0.y + p3.y,
+            p1.y * h - p0.y + p1.y,
+            p0.y,
             g,
             h,
         };
@@ -46,9 +45,7 @@ public class QuadWarp : MonoBehaviour {
 
     public void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        var homographyVtx = CalcHomography(_vertixes[0], _vertixes[3], _vertixes[2], _vertixes[1]);
-        var homographyUV = CalcHomography(_uvs[0], _uvs[3], _uvs[2], _uvs[1]);
-        var homography = homographyUV * homographyVtx.inverse;
+        var homography = CalcHomography(_vertixes[0], _vertixes[1], _vertixes[2], _vertixes[3]).inverse;
         
         Graphics.SetRenderTarget(destination);
         GL.Clear(true, true, Color.clear);
